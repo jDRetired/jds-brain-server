@@ -22,8 +22,8 @@ from mcp.types import ToolAnnotations
 
 BRAIN = Path("/srv/jds-brain")
 PUBLIC_URL = "https://brain.junkdrawer.tech"
-ISSUER = "https://sensible-belief-53-staging.authkit.app"
-OWNER_ID = "user_01M5G064PS6BWNGFZKYQZ0AQ68"
+ISSUER = "https://prominent-sea-01.authkit.app"
+OWNER_ID = "user_01M5ZNY2DNR0N1ZMMXXNPC9YME"
 SECURITY = TransportSecuritySettings(
     allowed_hosts=["brain.junkdrawer.tech", "127.0.0.1:*", "localhost:*"],
 )
