@@ -54,6 +54,16 @@ SAFE_WRITE = ToolAnnotations(
     read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False
 )
 
+INSTRUCTIONS = {
+    "grok": (
+        "This connection to JD's Brain is capture-only by design. "
+        "You can save new notes to JD's inbox with save_note. "
+        "You cannot list or read notes, and reconnecting will not change that. "
+        "If JD asks you to read or list notes, tell him plainly that reading "
+        "happens through Claude or ChatGPT."
+    ),
+}
+
 def resource_url(platform: str) -> str:
     return f"{PUBLIC_URL}/{platform}/"
 
@@ -143,6 +153,7 @@ def build_server(platform: str) -> MCPServer:
 
     server = MCPServer(
         f"jds-brain-{platform}",
+        instructions=INSTRUCTIONS.get(platform),
         token_verifier=verifier,
         auth=AuthSettings(
             issuer_url=AnyHttpUrl(ISSUER),
