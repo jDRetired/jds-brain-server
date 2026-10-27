@@ -17,11 +17,16 @@ from starlette.routing import Mount, Route
 from mcp.server import MCPServer
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.auth.settings import AuthSettings
+from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import ToolAnnotations
 
 BRAIN = Path("/srv/jds-brain")
 PUBLIC_URL = "https://brain.junkdrawer.tech"
 ISSUER = "https://sensible-belief-53-staging.authkit.app"
 OWNER_ID = "user_01M5G064PS6BWNGFZKYQZ0AQ68"
+SECURITY = TransportSecuritySettings(
+    allowed_hosts=["brain.junkdrawer.tech", "127.0.0.1:*", "localhost:*"],
+)
 JWKS = jwt.PyJWKClient(f"{ISSUER}/oauth2/jwks")
 
 OAUTH_PLATFORMS = {"claude", "chatgpt"}
@@ -42,6 +47,12 @@ PERMISSIONS = {
     "rabbit":  {"read": {"inbox", "shared"},                      "write": "inbox",   "curate": False},
 }
 
+READ_ONLY = ToolAnnotations(
+    read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False
+)
+SAFE_WRITE = ToolAnnotations(
+    read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False
+)
 
 def resource_url(platform: str) -> str:
     return f"{PUBLIC_URL}/{platform}/"
@@ -203,7 +214,7 @@ SERVERS = {name: build_server(name) for name in PERMISSIONS}
 ROUTES = [
     Route("/.well-known/oauth-protected-resource/{platform}/", protected_resource_metadata),
     *[
-        Mount(f"/{name}", app=srv.streamable_http_app(streamable_http_path="/"))
+        Mount(f"/{name}", app=srv.streamable_http_app(streamable_http_path="/", transport_security=SECURITY))
         for name, srv in SERVERS.items()
     ],
 ]
