@@ -152,13 +152,13 @@ def build_server(platform: str) -> MCPServer:
         ),
     )
 
-    @server.tool()
+    @server.tool(annotations=READ_ONLY)
     def list_notes(zone: str) -> list[str]:
         """List the note files in one zone of the brain."""
         folder = zone_folder(zone, perms["read"])
         return sorted(p.name for p in folder.glob("*.md"))
 
-    @server.tool()
+    @server.tool(annotations=READ_ONLY)
     def read_note(zone: str, name: str) -> str:
         """Return the full text of one note."""
         folder = zone_folder(zone, perms["read"])
@@ -168,19 +168,19 @@ def build_server(platform: str) -> MCPServer:
             raise ValueError(f"No such note: {name}")
         return path.read_text()
 
-    @server.tool()
+    @server.tool(annotations=SAFE_WRITE)
     def save_note(title: str, body: str) -> str:
         """Save a new note to your own zone. Returns the new file name."""
         return create_note(perms["write"], platform, title, body)
 
     if perms["curate"]:
 
-        @server.tool()
+        @server.tool(annotations=SAFE_WRITE)
         def save_to_shared(title: str, body: str) -> str:
             """Save a new note to the shared zone. Only use when JD explicitly asks."""
             return create_note("shared", platform, title, body)
 
-        @server.tool()
+        @server.tool(annotations=SAFE_WRITE)
         def archive_note(name: str) -> str:
             """Move a processed note from the inbox into the inbox archive."""
             check_name(name)
