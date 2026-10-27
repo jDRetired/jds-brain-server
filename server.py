@@ -29,8 +29,8 @@ SECURITY = TransportSecuritySettings(
 )
 JWKS = jwt.PyJWKClient(f"{ISSUER}/oauth2/jwks")
 
-OAUTH_PLATFORMS = {"claude", "chatgpt"}
-TOKEN_ENV = {"grok": "GROK_TOKEN", "rabbit": "RABBIT_TOKEN"}
+OAUTH_PLATFORMS = {"claude", "chatgpt", "grok"}
+TOKEN_ENV = {"rabbit": "RABBIT_TOKEN"}
 
 ZONE_PATHS = {
     "claude": "claude",
@@ -152,21 +152,22 @@ def build_server(platform: str) -> MCPServer:
         ),
     )
 
-    @server.tool(annotations=READ_ONLY)
-    def list_notes(zone: str) -> list[str]:
-        """List the note files in one zone of the brain."""
-        folder = zone_folder(zone, perms["read"])
-        return sorted(p.name for p in folder.glob("*.md"))
+    if perms["read"]:
+        @server.tool(annotations=READ_ONLY)
+        def list_notes(zone: str) -> list[str]:
+            """List the note files in one zone of the brain."""
+            folder = zone_folder(zone, perms["read"])
+            return sorted(p.name for p in folder.glob("*.md"))
 
-    @server.tool(annotations=READ_ONLY)
-    def read_note(zone: str, name: str) -> str:
-        """Return the full text of one note."""
-        folder = zone_folder(zone, perms["read"])
-        check_name(name)
-        path = folder / name
-        if not path.is_file():
-            raise ValueError(f"No such note: {name}")
-        return path.read_text()
+        @server.tool(annotations=READ_ONLY)
+        def read_note(zone: str, name: str) -> str:
+            """Return the full text of one note."""
+            folder = zone_folder(zone, perms["read"])
+            check_name(name)
+            path = folder / name
+            if not path.is_file():
+                raise ValueError(f"No such note: {name}")
+            return path.read_text()
 
     @server.tool(annotations=SAFE_WRITE)
     def save_note(title: str, body: str) -> str:
