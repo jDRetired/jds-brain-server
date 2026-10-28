@@ -110,9 +110,13 @@ class StaticTokenVerifier(TokenVerifier):
         return None
 
 
+def zone_list(zones: set[str]) -> str:
+    return ", ".join(sorted(zones))
+
+
 def zone_folder(zone: str, allowed: set[str]) -> Path:
     if zone not in allowed:
-        raise ValueError(f"Zone not allowed: {zone}")
+        raise ValueError(f"Zone not allowed: {zone}. Zones you can read: {zone_list(allowed)}")
     return BRAIN / ZONE_PATHS[zone]
 
 
@@ -164,13 +168,21 @@ def build_server(platform: str) -> MCPServer:
     )
 
     if perms["read"]:
-        @server.tool(annotations=READ_ONLY)
+        zones = zone_list(perms["read"])
+
+        @server.tool(
+                annotations=READ_ONLY,
+                description=f"List the note files in one zone of the brain. Zones you can read: {zones}.")
+        
         def list_notes(zone: str) -> list[str]:
             """List the note files in one zone of the brain."""
             folder = zone_folder(zone, perms["read"])
             return sorted(p.name for p in folder.glob("*.md"))
 
-        @server.tool(annotations=READ_ONLY)
+        @server.tool(
+                annotations=READ_ONLY,
+                description=f"Return the full text of one note. Zones you can read: {zones}.")
+        
         def read_note(zone: str, name: str) -> str:
             """Return the full text of one note."""
             folder = zone_folder(zone, perms["read"])
