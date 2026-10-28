@@ -192,7 +192,10 @@ def build_server(platform: str) -> MCPServer:
                 raise ValueError(f"No such note: {name}")
             return path.read_text()
 
-    @server.tool(annotations=SAFE_WRITE)
+    @server.tool(
+            annotations=SAFE_WRITE,
+            description=f"Save a new note to the {perms['write']} zone. Returns the new file name.")
+    
     def save_note(title: str, body: str) -> str:
         """Save a new note to your own zone. Returns the new file name."""
         return create_note(perms["write"], platform, title, body)
