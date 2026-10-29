@@ -1,0 +1,30 @@
+# Brain scheduler rules: change behavior here, not in the code.
+timezone = "America/Chicago"
+
+[calendars]
+read  = "jamiel@thedavis.club"
+write = "c_d9c16a445df7855f42028debdbc2db98be030792d36b090b149bc9713317d425@group.calendar.google.com"
+
+[work_fence]
+days  = ["mon", "tue", "wed", "thu", "fri"]
+start = "06:00"
+end   = "14:00"
+
+[dev]
+start_date        = "2026-11-02"
+min_hours_week    = 15
+ideal_hours_week  = 20
+min_block_minutes = 60
+max_block_minutes = 120
+
+[study]
+min_hours_week    = 6
+ideal_hours_week  = 10
+min_block_minutes = 45
+max_block_minutes = 90
+weekday_window    = { start = "14:00", end = "20:00" }
+weekend_window    = { start = "07:00", end = "12:00" }
+
+[travel]
+before_and_after  = true
+fallback_minutes  = 30
