@@ -11,7 +11,6 @@ from slots import KEY, RULES, at, fetch_busy, subtract, windows_for
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events",
           "https://www.googleapis.com/auth/calendar.readonly"]
-TITLES = {"dev": "Focus: work dev", "study": "Study"}
 
 
 def round15(td):
@@ -36,22 +35,33 @@ def fetch_days_off(cal, cal_id, monday, rules, tz):
     return off
 
 
-def place(kind, monday, rules, busy, days_off, tz):
-    """Spread one block type evenly across the week's eligible days."""
+def week_days(kind, monday, rules, days_off, tz):
+    """(normal days for this block type, those days minus days off)."""
+    start_date = date.fromisoformat(rules[kind].get("start_date", "2000-01-01"))
+    week = [monday + timedelta(days=i) for i in range(7)]
+    normal = [d for d in week if d >= start_date and windows_for(d, rules, tz)[kind]]
+    return normal, [d for d in normal if d not in days_off]
+
+
+def week_target(kind, monday, rules, days_off, tz):
+    """The week's ideal hours, shrunk in proportion to days off."""
+    normal, days = week_days(kind, monday, rules, days_off, tz)
+    if not days:
+        return timedelta(0)
+    return timedelta(hours=rules[kind]["ideal_hours_week"]) * len(days) / len(normal)
+
+
+def place(kind, monday, rules, busy, days_off, tz, target=None):
+    """Spread `target` (default: the week's goal) evenly across eligible days."""
     r = rules[kind]
     min_b = timedelta(minutes=r["min_block_minutes"])
     max_b = timedelta(minutes=r["max_block_minutes"])
     brk = timedelta(minutes=rules["break_minutes"])
-    start_date = date.fromisoformat(r.get("start_date", "2000-01-01"))
-
-    week = [monday + timedelta(days=i) for i in range(7)]
-    normal = [d for d in week if d >= start_date and windows_for(d, rules, tz)[kind]]
-    days = [d for d in normal if d not in days_off]
+    _, days = week_days(kind, monday, rules, days_off, tz)
     if not days:
         return []
 
-    # Goal shrinks in proportion to days lost (a 4-day week gets 4/5 of dev)
-    remaining = timedelta(hours=r["ideal_hours_week"]) * len(days) / len(normal)
+    remaining = week_target(kind, monday, rules, days_off, tz) if target is None else target
     blocks = []
     for i, day in enumerate(days):
         quota = remaining / (len(days) - i)
@@ -110,10 +120,15 @@ def main():
 
     for kind, s, e in plan:
         cal.events().insert(calendarId=write_id, body={
-            "summary": TITLES[kind],
+            "summary": rules[kind]["title"],
             "start": {"dateTime": s.isoformat(), "timeZone": rules["timezone"]},
             "end": {"dateTime": e.isoformat(), "timeZone": rules["timezone"]},
-            "extendedProperties": {"private": {"brain_kind": kind, "brain_week": monday.isoformat()}},
+            "extendedProperties": {"private": {
+                "brain_kind": kind,
+                "brain_week": monday.isoformat(),
+                "brain_start": s.isoformat(),   # where the code put it...
+                "brain_end": e.isoformat(),     # ...so a mismatch later = you moved it
+            }},
         }).execute()
     print(f"\nWrote {len(plan)} blocks to Brain Blocks.")
 

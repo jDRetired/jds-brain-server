@@ -15,6 +15,7 @@ start = "06:00"
 end   = "14:00"
 
 [dev]
+title             = "Focus: Development"
 start_date        = "2026-11-02"
 min_hours_week    = 15
 ideal_hours_week  = 20
@@ -23,6 +24,8 @@ max_block_minutes = 120
 window            = { start = "07:00", end = "14:00"}
 
 [study]
+title             = "Study"
+start_date        = "2026-11-02"
 min_hours_week    = 6
 ideal_hours_week  = 10
 min_block_minutes = 45
@@ -31,5 +34,6 @@ weekday_window    = { start = "14:30", end = "20:00" }
 weekend_window    = { start = "07:00", end = "12:00" }
 
 [travel]
+title             = "Travel Time"
 before_and_after  = true
 fallback_minutes  = 30
