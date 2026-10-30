@@ -1,6 +1,7 @@
 """Dry run: show open slots for dev and study in one week. Writes nothing."""
 import sys
 import tomllib
+import re
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -57,6 +58,27 @@ def fetch_busy(cal, cal_id, start, end, tz):
     return [(datetime.fromisoformat(b["start"]).astimezone(tz),
              datetime.fromisoformat(b["end"]).astimezone(tz))
             for b in info["busy"]]
+
+
+def fetch_work_buffers(cal, cal_id, start, end, tz, rules):
+    """No-study zones right after events titled like 'Work Meeting'."""
+    prefix = rules.get("work_title_prefix", "")
+    minutes = rules["study"].get("buffer_after_work_minutes", 0)
+    if not prefix or not minutes:
+        return []
+    pattern = re.compile(rf"{re.escape(prefix)}\b", re.IGNORECASE)   # 'Work' yes, 'Workout' no
+    items = cal.events().list(
+        calendarId=cal_id, singleEvents=True, maxResults=250,
+        timeMin=start.isoformat(), timeMax=end.isoformat(),
+    ).execute().get("items", [])
+    out = []
+    for e in items:
+        if "dateTime" not in e.get("end", {}):      # all-day events have no end time to buffer
+            continue
+        if pattern.match(e.get("summary", "").strip()):
+            ev_end = datetime.fromisoformat(e["end"]["dateTime"]).astimezone(tz)
+            out.append((ev_end, ev_end + timedelta(minutes=minutes)))
+    return out
 
 
 def main():

@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 
 from blocks import load_blocks
 from plan import SCOPES, fetch_days_off, place, week_target
-from slots import KEY, RULES, at, fetch_busy
+from slots import KEY, RULES, at, fetch_busy, fetch_work_buffers
 
 KINDS = ("dev", "study")
 
@@ -25,6 +25,7 @@ def reconcile_week(cal, rules, monday, now, tz, apply):
     week_end = at(monday + timedelta(days=7), "00:00", tz)
     busy = fetch_busy(cal, read_id, week_start, week_end, tz)
     days_off = fetch_days_off(cal, read_id, monday, rules, tz)
+    work_buffers = fetch_work_buffers(cal, read_id, week_start, week_end, tz, rules)
     off_spans = [(at(d, "00:00", tz), at(d + timedelta(days=1), "00:00", tz)) for d in days_off]
 
     keep, actions = [], []
@@ -39,7 +40,8 @@ def reconcile_week(cal, rules, monday, now, tz, apply):
         if span[1] <= now:                     # in the past: never touched
             keep.append((b["kind"], span))
             continue
-        if overlaps(span, busy) or overlaps(span, off_spans):
+        extra = work_buffers if b["kind"] == "study" else []
+        if overlaps(span, busy) or overlaps(span, off_spans) or overlaps(span, extra):
             actions.append(("delete", b, span))    # appointment / day off wins
             continue
         keep.append((b["kind"], span))
@@ -55,7 +57,8 @@ def reconcile_week(cal, rules, monday, now, tz, apply):
         short = week_target(kind, monday, rules, days_off, tz) - have
         if short < timedelta(minutes=rules[kind]["min_block_minutes"]):
             continue                           # close enough: don't chase crumbs
-        for span in place(kind, monday, rules, blocked, days_off, tz, target=short):
+        avoid = blocked + (work_buffers if kind == "study" else [])
+        for span in place(kind, monday, rules, avoid, days_off, tz, target=short):
             actions.append(("create", kind, span))
 
     for act, obj, (s, e) in actions:
