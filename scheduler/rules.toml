@@ -3,6 +3,7 @@
 timezone                  = "America/Chicago"
 break_minutes             = 30
 work_title_prefix         = "Work"
+online_markers            = ["http", "teams", "zoom", "meet.google", "webex"]
 
 days_off                  = [2026-11-11, 2026-11-26, 2026-12-25]
 

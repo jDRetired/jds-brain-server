@@ -1,8 +1,9 @@
 """Reconcile Brain blocks with the calendar. Dry run unless --apply is given."""
 import sys
 import tomllib
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+from travel import sync_travel
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -26,6 +27,8 @@ def reconcile_week(cal, rules, monday, now, tz, apply):
     busy = fetch_busy(cal, read_id, week_start, week_end, tz)
     days_off = fetch_days_off(cal, read_id, monday, rules, tz)
     work_buffers = fetch_work_buffers(cal, read_id, week_start, week_end, tz, rules)
+    travel_spans, travel_changes = sync_travel(cal, rules, monday, week_start, week_end, now, tz, apply)
+    busy = busy + travel_spans              # drive time is busy time for dev and study
     off_spans = [(at(d, "00:00", tz), at(d + timedelta(days=1), "00:00", tz)) for d in days_off]
 
     keep, actions = [], []
@@ -85,7 +88,7 @@ def reconcile_week(cal, rules, monday, now, tz, apply):
                     "brain_kind": kind, "brain_week": monday.isoformat(),
                     "brain_start": s.isoformat(), "brain_end": e.isoformat()}},
             }).execute()
-    return len(actions)
+    return len(actions) + travel_changes
 
 
 def main():
@@ -100,7 +103,13 @@ def main():
     cal = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
     total = 0
-    for monday in (this_monday, this_monday + timedelta(days=7)):   # this week + next
+    args = [a for a in sys.argv[1:] if a != "--apply"]
+    if args:
+        d = date.fromisoformat(args[0])
+        weeks = [d - timedelta(days=d.weekday())]
+    else:
+        weeks = [this_monday, this_monday + timedelta(days=7)]
+    for monday in weeks:
         print(f"--- week of {monday:%m/%d}")
         total += reconcile_week(cal, rules, monday, now, tz, apply)
     if total == 0:
